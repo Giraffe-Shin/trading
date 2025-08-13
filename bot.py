@@ -9,6 +9,9 @@ DISCLAIMER:
 
 import getpass
 
+# Wrap third-party imports to surface a helpful message when the
+# `python-binance` package is not installed instead of failing with a
+# cryptic error.
 try:
     from binance.client import Client
     from binance.enums import SIDE_BUY, SIDE_SELL, ORDER_TYPE_MARKET
