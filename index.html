@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <title>XGBoost Price Prediction Dashboard</title>
+    <script src='https://d3js.org/d3.v7.min.js'></script>
+    <style>
+        body { font-family: sans-serif; margin: 40px; background-color: #f5f5f5; }
+        .container { display: flex; flex-direction: column; gap: 50px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .line-actual { fill: none; stroke: #3498db; stroke-width: 2; }
+        .line-pred { fill: none; stroke: #e74c3c; stroke-width: 2; stroke-dasharray: 4; }
+        .axis-label { font-size: 12px; }
+        .bar { fill: #2ecc71; }
+        h2 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div>
+            <h2>Price Prediction: Actual vs Predicted</h2>
+            <div id='timeseries'></div>
+        </div>
+        <div>
+            <h2>Feature Importance</h2>
+            <div id='importance'></div>
+        </div>
+    </div>
+
+    <script>
+        d3.json('dashboard_data.json').then(data => {
+            // 1. Time Series Chart
+            const margin = {top: 20, right: 30, bottom: 50, left: 50}, width = 900 - margin.left - margin.right, height = 400 - margin.top - margin.bottom;
+            const svg1 = d3.select('#timeseries').append('svg').attr('width', width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom).append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+            
+            const x = d3.scalePoint().domain(data.time_series.map(d => d.date)).range([0, width]);
+            const y = d3.scaleLinear().domain([0, d3.max(data.time_series, d => Math.max(d.actual, d.predicted)) * 1.1]).range([height, 0]);
+
+            svg1.append('g').attr('transform', `translate(0,${height})`).call(d3.axisBottom(x).tickValues(x.domain().filter((d,i) => !(i%10)))).selectAll('text').style('text-anchor', 'end').attr('transform', 'rotate(-45)');
+            svg1.append('g').call(d3.axisLeft(y));
+
+            svg1.append('path').datum(data.time_series).attr('class', 'line-actual').attr('d', d3.line().x(d => x(d.date)).y(d => y(d.actual)));
+            svg1.append('path').datum(data.time_series).attr('class', 'line-pred').attr('d', d3.line().x(d => x(d.date)).y(d => y(d.predicted)));
+
+            // 2. Feature Importance Chart
+            const svg2 = d3.select('#importance').append('svg').attr('width', width + margin.left + margin.right).attr('height', 300).append('g').attr('transform', `translate(${margin.left + 50},20)`);
+            const xImp = d3.scaleLinear().domain([0, d3.max(data.importance, d => d.importance)]).range([0, width - 100]);
+            const yImp = d3.scaleBand().domain(data.importance.map(d => d.feature)).range([0, 250]).padding(0.1);
+
+            svg2.append('g').call(d3.axisLeft(yImp));
+            svg2.selectAll('.bar').data(data.importance).enter().append('rect').attr('class', 'bar').attr('y', d => yImp(d.feature)).attr('height', yImp.bandwidth()).attr('x', 0).attr('width', d => xImp(d.importance));
+        });
+    </script>
+</body>
+</html>
