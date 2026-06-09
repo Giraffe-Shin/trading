@@ -62,7 +62,8 @@
             event.currentTarget.classList.add('active');
         }
 
-        fetch('dashboard_data.json').then(res => res.json()).then(data => {
+        // 캐시 방지를 위해 버전 쿼리 추가
+        fetch('dashboard_data.json?v=1781021485').then(res => res.json()).then(data => {
             document.getElementById('insight_load').innerText = data.insights.load_error;
             document.getElementById('insight_time_series').innerText = data.insights.time_series;
             document.getElementById('insight_importance').innerText = data.insights.importance;
