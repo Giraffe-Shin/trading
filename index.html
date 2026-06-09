@@ -24,7 +24,6 @@
     </div>
 
     <div class='content'>
-        <!-- Page 1 -->
         <div id='page1' class='page active'>
             <div class='card'>
                 <h2>월별 전력 부하(Load) 예측 오차율</h2>
@@ -34,11 +33,9 @@
             <div class='card'>
                 <h2>신재생 에너지원별 예측 오차(MAE)</h2>
                 <canvas id='chart_renewable_mae'></canvas>
-                <div class='insight'>계절에 따른 태양광 및 풍력 발전의 예측 변동성을 보여줍니다.</div>
             </div>
         </div>
 
-        <!-- Page 2 -->
         <div id='page2' class='page'>
             <div class='card'>
                 <h2>XGBoost vs FT-Transformer 시계열 비교</h2>
@@ -70,35 +67,47 @@
             document.getElementById('insight_time_series').innerText = data.insights.time_series;
             document.getElementById('insight_importance').innerText = data.insights.importance;
 
-            // 1. Load Error Chart
             new Chart(document.getElementById('chart_load_error'), {
-                type: 'bar',
-                data: {
+                type: 'bar', data: {
                     labels: data.load_monthly_error.map(d => d.month + '월'),
                     datasets: [{ label: 'Error Rate (%)', data: data.load_monthly_error.map(d => d.error_rate), backgroundColor: '#3498db' }]
                 }
             });
 
-            // 2. Model Comparison Line Chart
-            new Chart(document.getElementById('chart_model_comp'), {
-                type: 'line',
-                data: {
-                    labels: data.time_series.map((_, i) => i),
+            new Chart(document.getElementById('chart_renewable_mae'), {
+                type: 'bar', data: {
+                    labels: data.renewable_monthly_mae.map(d => d.month + '월'),
                     datasets: [
-                        { label: 'Actual', data: data.time_series.map(d => d.actual), borderColor: '#34495e', fill: false },
-                        { label: 'XGBoost', data: data.time_series.map(d => d.predicted), borderColor: '#27ae60', borderDash: [5,5] },
-                        { label: 'FT-Transformer', data: data.ft_time_series.map(d => d.predicted), borderColor: '#e67e22', borderDash: [2,2] }
+                        { label: 'Solar MAE', data: data.renewable_monthly_mae.map(d => d.solar_mae), backgroundColor: '#f1c40f' },
+                        { label: 'Wind On MAE', data: data.renewable_monthly_mae.map(d => d.wind_on_mae), backgroundColor: '#2ecc71' },
+                        { label: 'Wind Off MAE', data: data.renewable_monthly_mae.map(d => d.wind_off_mae), backgroundColor: '#34495e' }
                     ]
                 }
             });
 
-            // 3. MAE Bar Chart
-            new Chart(document.getElementById('chart_mae_bar'), {
-                type: 'bar',
-                data: {
-                    labels: ['XGBoost', 'FT-Transformer'],
-                    datasets: [{ data: [data.model_comparison.xgboost_mae, data.model_comparison.ft_mae], backgroundColor: ['#27ae60', '#e67e22'] }]
+            new Chart(document.getElementById('chart_model_comp'), {
+                type: 'line', data: {
+                    labels: data.time_series.map((d, i) => i),
+                    datasets: [
+                        { label: 'Actual', data: data.time_series.map(d => d.actual), borderColor: '#34495e', fill: false },
+                        { label: 'XGBoost', data: data.time_series.map(d => d.predicted), borderColor: '#27ae60' },
+                        { label: 'FT-Transformer', data: data.ft_time_series.map(d => d.predicted), borderColor: '#e67e22' }
+                    ]
                 }
+            });
+
+            new Chart(document.getElementById('chart_mae_bar'), {
+                type: 'bar', data: {
+                    labels: ['XGBoost', 'FT-Transformer'],
+                    datasets: [{ label: 'MAE', data: [data.model_comparison.xgboost_mae, data.model_comparison.ft_mae], backgroundColor: ['#27ae60', '#e67e22'] }]
+                }
+            });
+
+            new Chart(document.getElementById('chart_importance'), {
+                type: 'bar', data: {
+                    labels: data.importance.map(d => d.feature), 
+                    datasets: [{ label: 'Importance', data: data.importance.map(d => d.importance), backgroundColor: '#9b59b6' }]
+                }, options: { indexAxis: 'y' }
             });
         });
     </script>
