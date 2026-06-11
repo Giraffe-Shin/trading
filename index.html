@@ -388,5 +388,64 @@
     }
     </script>
     
+
+    <style>
+        #page1 .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        #page1 .chart-container {
+            background: #fff; padding: 15px; border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-height: 350px;
+        }
+        .chart-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; text-align: center; }
+    </style>
+
+    <div class="chart-grid">
+        <div class="chart-container"><div class="chart-title">Generation Mix (MWh)</div><div id="generation-mix-chart"></div></div>
+        <div class="chart-container"><div class="chart-title">Total Trend</div><div id="total-trend-chart"></div></div>
+        <div class="chart-container"><div class="chart-title">Share Trends</div><div id="share-trends-chart"></div></div>
+        <div class="chart-container"><div class="chart-title">Distribution (KDE)</div><div id="distribution-chart"></div></div>
+    </div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        // D3 Rendering Logic (Scope limited to Page 1 containers)
+        (function() {
+            const dataUrl = "https://raw.githubusercontent.com/Giraffe-Shin/trading/main/dashboard_data.json";
+            const margin = {top: 20, right: 30, bottom: 40, left: 55};
+            const width = 500 - margin.left - margin.right;
+            const height = 300 - margin.top - margin.bottom;
+
+            d3.json(dataUrl).then(data => {
+                if(data.generation_mix) renderMix(data.generation_mix);
+                if(data.total_generation_trend) renderTotal(data.total_generation_trend);
+            });
+
+            function renderMix(data) {
+                const svg = d3.select("#generation-mix-chart").append("svg").attr("viewBox", `0 0 500 300`)
+                    .append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+                const x = d3.scaleTime().domain(d3.extent(data, d => new Date(d.timestamp))).range([0, width]);
+                const y = d3.scaleLinear().domain([0, d3.max(data, d => d.Total)]).range([height, 0]);
+                svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).ticks(5));
+                svg.append("g").call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".2s")));
+                // ... (Area path logic here)
+            }
+
+            function renderTotal(data) {
+                const svg = d3.select("#total-trend-chart").append("svg").attr("viewBox", `0 0 500 300`)
+                    .append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+                const x = d3.scaleTime().domain(d3.extent(data, d => new Date(d.timestamp))).range([0, width]);
+                const y = d3.scaleLinear().domain([0, d3.max(data, d => d.Total)]).range([height, 0]);
+                svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).ticks(5));
+                svg.append("g").call(d3.axisLeft(y).ticks(5));
+                svg.append("path").datum(data).attr("fill", "none").attr("stroke", "steelblue").attr("stroke-width", 2)
+                    .attr("d", d3.line().x(d => x(new Date(d.timestamp))).y(d => y(d.Total)));
+            }
+        })();
+    </script>
+    
 </body>
 </html>
