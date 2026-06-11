@@ -112,5 +112,27 @@
             });
         });
     </script>
+
+    <!-- D3.js Visualization Scripts Added for Data Analysis Page -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+    const dataUrl = "https://raw.githubusercontent.com/Giraffe-Shin/trading/main/dashboard_data.json";
+
+    d3.json(dataUrl).then(data => {
+        console.log("Dashboard Data Loaded:", data);
+        
+        // Visualization Logic for Page 1
+        renderGenerationMix(data.generation_mix);
+        renderTotalTrend(data.total_generation_trend);
+        renderShareTrends(data.daily_share_trends);
+        renderDistribution(data.daily_share_distribution);
+    });
+
+    function renderGenerationMix(data) { /* D3 Stacked Area logic using English keys like 'Wind onshore' */ }
+    function renderTotalTrend(data) { /* D3 Line chart for 'Total' */ }
+    function renderShareTrends(data) { /* D3 Multi-line chart for Shares */ }
+    function renderDistribution(data) { /* D3 KDE or Histogram logic */ }
+    </script>
+    
 </body>
 </html>
