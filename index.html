@@ -30,6 +30,110 @@
             <style>
                 .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px; margin-top: 20px; }
                 .chart-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+                .chart-card h3 { text-align: center; margin-bottom: 15px; color: #2c3e50; font-size: 1.1em; }
+                .legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 10px; font-size: 12px; }
+                .legend-item { display: flex; align-items: center; gap: 4px; }
+                .legend-color { width: 12px; height: 12px; border-radius: 2px; }
+                svg { width: 100%; height: auto; font-family: sans-serif; }
+            </style>
+            <div class="chart-grid">
+                <div class="chart-card"><h3>Generation Mix (Daily)</h3><div id="mix-chart"></div><div id="mix-legend" class="legend"></div></div>
+                <div class="chart-card"><h3>Total Generation Trend</h3><div id="total-chart"></div></div>
+                <div class="chart-card"><h3>Renewable Share Trends</h3><div id="share-chart"></div></div>
+                <div class="chart-card"><h3>Daily Share Distribution (KDE)</h3><div id="dist-chart"></div></div>
+            </div>
+            <script src="https://d3js.org/d3.v7.min.js"></script>
+            <script>
+                (function() {
+                    const url = "https://raw.githubusercontent.com/Giraffe-Shin/trading/main/dashboard_data.json";
+                    const m = {t: 20, r: 30, b: 40, l: 50}, w = 500 - m.l - m.r, h = 300 - m.t - m.b;
+                    const colors = d3.scaleOrdinal(d3.schemeTableau10);
+
+                    d3.json(url).then(data => {
+                        if (data.generation_mix) drawMix(data.generation_mix);
+                        if (data.total_generation_trend) drawTotal(data.total_generation_trend);
+                        if (data.daily_share_trends) drawShareTrends(data.daily_share_trends);
+                        if (data.daily_share_distribution) drawDist(data.daily_share_distribution);
+                    });
+
+                    function drawMix(data) {
+                        const svg = d3.select("#mix-chart").append("svg").attr("viewBox", `0 0 500 300`)
+                            .append("g").attr("transform", `translate(${m.l},${m.t})`);
+                        const x = d3.scaleTime().domain(d3.extent(data, d => new Date(d.timestamp))).range([0, w]);
+                        const y = d3.scaleLinear().domain([0, d3.max(data, d => d.Total)]).range([h, 0]);
+                        svg.append("g").attr("transform", `translate(0,${h})`).call(d3.axisBottom(x).ticks(5));
+                        svg.append("g").call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".2s")));
+                        
+                        const keys = Object.keys(data[0]).filter(k => k !== 'timestamp' && k !== 'Total');
+                        const stacked = d3.stack().keys(keys)(data);
+                        
+                        svg.selectAll("path").data(stacked).join("path")
+                            .attr("fill", d => colors(d.key))
+                            .attr("d", d3.area().x(d => x(new Date(d.data.timestamp))).y0(d => y(d[0])).y1(d => y(d[1])));
+
+                        const legend = d3.select("#mix-legend");
+                        keys.forEach(key => {
+                            const item = legend.append("div").attr("class", "legend-item");
+                            item.append("div").attr("class", "legend-color").style("background", colors(key));
+                            item.append("span").text(key);
+                        });
+                    }
+
+                    function drawTotal(data) {
+                        const svg = d3.select("#total-chart").append("svg").attr("viewBox", `0 0 500 300`)
+                            .append("g").attr("transform", `translate(${m.l},${m.t})`);
+                        const x = d3.scaleTime().domain(d3.extent(data, d => new Date(d.timestamp))).range([0, w]);
+                        const y = d3.scaleLinear().domain([0, d3.max(data, d => d.Total)]).range([h, 0]);
+                        svg.append("g").attr("transform", `translate(0,${h})`).call(d3.axisBottom(x).ticks(5));
+                        svg.append("g").call(d3.axisLeft(y).ticks(5));
+                        svg.append("path").datum(data).attr("fill", "none").attr("stroke", "#3498db").attr("stroke-width", 2)
+                            .attr("d", d3.line().x(d => x(new Date(d.timestamp))).y(d => y(d.Total)));
+                    }
+
+                    function drawShareTrends(data) {
+                        const svg = d3.select("#share-chart").append("svg").attr("viewBox", `0 0 500 300`)
+                            .append("g").attr("transform", `translate(${m.l},${m.t})`);
+                        const x = d3.scaleTime().domain(d3.extent(data, d => new Date(d.timestamp))).range([0, w]);
+                        const y = d3.scaleLinear().domain([0, 1]).range([h, 0]);
+                        svg.append("g").attr("transform", `translate(0,${h})`).call(d3.axisBottom(x).ticks(5));
+                        svg.append("g").call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".0%")));
+                        
+                        const lines = ['Solar_Share', 'Wind_Onshore_Share', 'Wind_Offshore_Share'];
+                        lines.forEach((key, i) => {
+                            svg.append("path").datum(data).attr("fill", "none").attr("stroke", colors(i)).attr("stroke-width", 1.5)
+                                .attr("d", d3.line().x(d => x(new Date(d.timestamp))).y(d => y(d[key] || 0)));
+                        });
+                    }
+
+                    function drawDist(data) {
+                        const svg = d3.select("#dist-chart").append("svg").attr("viewBox", `0 0 500 300`)
+                            .append("g").attr("transform", `translate(${m.l},${m.t})`);
+                        const x = d3.scaleLinear().domain([0, 1]).range([0, w]);
+                        svg.append("g").attr("transform", `translate(0,${h})`).call(d3.axisBottom(x).ticks(5).tickFormat(d3.format(".0%")));
+                        
+                        function kde(kernel, thresholds, data) {
+                            return thresholds.map(t => [t, d3.mean(data, d => kernel(t - d))]);
+                        }
+                        function epanechnikov(bandwidth) {
+                            return x => Math.abs(x /= bandwidth) <= 1 ? 0.75 * (1 - x * x) / bandwidth : 0;
+                        }
+
+                        const thresholds = x.ticks(40);
+                        const density = kde(epanechnikov(0.05), thresholds, data.renewable_total);
+                        const y = d3.scaleLinear().domain([0, d3.max(density, d => d[1])]).range([h, 0]);
+
+                        svg.append("path").datum(density).attr("fill", "#1abc9c").attr("fill-opacity", 0.3).attr("stroke", "#16a085")
+                            .attr("stroke-width", 2).attr("d", d3.area().x(d => x(d[0])).y0(h).y1(d => y(d[1])));
+                    }
+                })();
+            </script>
+        </div>
+    
+
+        <div class="chart-grid-section">
+            <style>
+                .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px; margin-top: 20px; }
+                .chart-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
                 .chart-card h3 { text-align: center; margin-bottom: 15px; color: #2c3e50; }
                 svg { width: 100%; height: auto; }
             </style>
