@@ -202,5 +202,99 @@
     }
     </script>
     
+
+    <!-- D3.js Grid Implementation -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* 2열 그리드 레이아웃 설정 */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        .chart-container {
+            background: #fff;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            min-height: 350px;
+        }
+        .chart-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; text-align: center; color: #333; }
+        svg { width: 100%; height: auto; }
+    </style>
+
+    <div class="chart-grid">
+        <div class="chart-container">
+            <div class="chart-title">Generation Mix (Stacked)</div>
+            <div id="generation-mix-chart"></div>
+        </div>
+        <div class="chart-container">
+            <div class="chart-title">Total Generation Trend</div>
+            <div id="total-trend-chart"></div>
+        </div>
+        <div class="chart-container">
+            <div class="chart-title">Renewable Share Trends</div>
+            <div id="share-trends-chart"></div>
+        </div>
+        <div class="chart-container">
+            <div class="chart-title">Share Distribution (KDE)</div>
+            <div id="distribution-chart"></div>
+        </div>
+    </div>
+
+    <script>
+    const dataUrl = "https://raw.githubusercontent.com/Giraffe-Shin/trading/main/dashboard_data.json";
+    const margin = {top: 20, right: 30, bottom: 40, left: 50};
+    const width = 600 - margin.left - margin.right;
+    const height = 300 - margin.top - margin.bottom;
+
+    d3.json(dataUrl).then(data => {
+        renderGenerationMix(data.generation_mix);
+        renderTotalTrend(data.total_generation_trend);
+        // placeholder rendering for layout check
+        d3.select("#share-trends-chart").text("Multi-line Chart Loading...");
+        d3.select("#distribution-chart").text("KDE Chart Loading...");
+    });
+
+    function renderGenerationMix(data) {
+        const svg = d3.select("#generation-mix-chart").append("svg")
+            .attr("viewBox", `0 0 600 300`)
+            .append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+        const keys = Object.keys(data[0]).filter(k => k !== 'timestamp' && k !== 'Total');
+        const stack = d3.stack().keys(keys);
+        const stackedData = stack(data);
+
+        const x = d3.scaleTime().domain(d3.extent(data, d => new Date(d.timestamp))).range([0, width]);
+        const y = d3.scaleLinear().domain([0, d3.max(data, d => d.Total)]).range([height, 0]);
+        const color = d3.scaleOrdinal(d3.schemeTableau10).domain(keys);
+
+        svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).ticks(5));
+        svg.append("g").call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".2s")));
+
+        svg.selectAll(".layer").data(stackedData).enter().append("path")
+            .attr("class", "layer")
+            .attr("d", d3.area().x(d => x(new Date(d.data.timestamp))).y0(d => y(d[0])).y1(d => y(d[1])))
+            .style("fill", d => color(d.key));
+    }
+
+    function renderTotalTrend(data) {
+        const svg = d3.select("#total-trend-chart").append("svg")
+            .attr("viewBox", `0 0 600 300`)
+            .append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+        const x = d3.scaleTime().domain(d3.extent(data, d => new Date(d.timestamp))).range([0, width]);
+        const y = d3.scaleLinear().domain([0, d3.max(data, d => d.Total)]).range([height, 0]);
+
+        svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).ticks(5));
+        svg.append("g").call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".2s")));
+
+        svg.append("path").datum(data)
+            .attr("fill", "none").attr("stroke", "#2c3e50").attr("stroke-width", 2)
+            .attr("d", d3.line().x(d => x(new Date(d.timestamp))).y(d => y(d.Total)));
+    }
+    </script>
+    
 </body>
 </html>
